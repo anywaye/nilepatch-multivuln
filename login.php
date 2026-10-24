@@ -3,13 +3,18 @@ require_once 'includes/auth.php';
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
-    if (login($username, $password)) {
-        header('Location: /');
-        exit;
+    $token = $_POST['csrf_token'] ?? '';
+    if (!verifyCsrfToken($token)) {
+        $error = 'Invalid CSRF token';
     } else {
-        $error = 'Invalid credentials';
+        $username = $_POST['username'] ?? '';
+        $password = $_POST['password'] ?? '';
+        if (login($username, $password)) {
+            header('Location: /');
+            exit;
+        } else {
+            $error = 'Invalid credentials';
+        }
     }
 }
 ?>
@@ -19,9 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <h1>Login</h1>
     <?php if ($error): ?>
-        <p style="color:red"><?php echo $error; ?></p>
+        <p style="color:red"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
     <?php endif; ?>
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(csrfToken(), ENT_QUOTES, 'UTF-8'); ?>">
         <input type="text" name="username" placeholder="Username">
         <input type="password" name="password" placeholder="Password">
         <button type="submit">Login</button>

@@ -1,18 +1,40 @@
 <?php
-// Authentication - VULNERABLE: SQL injection, no password hashing, no CSRF
+// Authentication
+require_once __DIR__ . '/../config/db.php';
+
 session_start();
+
+function csrfToken() {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function verifyCsrfToken($token) {
+    return isset($_SESSION['csrf_token']) && is_string($token)
+        && hash_equals($_SESSION['csrf_token'], $token);
+}
 
 function login($username, $password) {
     $db = getDB();
-    // VULNERABLE: SQL injection via string concatenation
-    $query = "SELECT * FROM users WHERE username = '$username' AND password = '$password'";
-    $result = $db->query($query);
+    // Use a prepared statement to prevent SQL injection
+    $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
+    if (!$stmt) {
+        return false;
+    }
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
     if ($result && $result->num_rows > 0) {
         $user = $result->fetch_assoc();
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['role'] = $user['role'];
-        return true;
+        // Verify hashed password
+        if (isset($user['password']) && password_verify($password, $user['password'])) {
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role'] = $user['role'];
+            return true;
+        }
     }
     return false;
 }
@@ -22,7 +44,7 @@ function isLoggedIn() {
 }
 
 function isAdmin() {
-    return isLoggedIn() && $_SESSION['role'] === 'admin';
+    return isLoggedIn() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 }
 
 function requireLogin() {
