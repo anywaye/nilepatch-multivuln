@@ -12,14 +12,14 @@ $page = $_GET['page'] ?? 'home';
     <h1>Complex Test App</h1>
     
     <?php if (isLoggedIn()): ?>
-        <p>Welcome, <?php echo $_SESSION['username']; ?> (<?php echo $_SESSION['role']; ?>)</p>
+        <p>Welcome, <?php echo htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8'); ?> (<?php echo htmlspecialchars($_SESSION['role'], ENT_QUOTES, 'UTF-8'); ?>)</p>
         <a href="/logout.php">Logout</a>
     <?php else: ?>
         <a href="/login.php">Login</a>
     <?php endif; ?>
     
     <form method="GET" action="/">
-        <input type="text" name="search" value="<?php echo $search; ?>" placeholder="Search users">
+        <input type="text" name="search" value="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>" placeholder="Search users">
         <button type="submit">Search</button>
     </form>
     
